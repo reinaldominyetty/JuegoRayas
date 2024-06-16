@@ -15,6 +15,10 @@
         </div>
         
         <h1><span class="Tic">Tic</span>Tac<span class="toe">Toe</span></h1>
+        <div class="scoreboard">
+            <p> X: <span id="xWins">0</span></p>
+            <p> O: <span id="oWins">0</span></p>
+        </div>
        
         <div class="board" id="board">
             <div class="cell" data-cell></div>
@@ -31,6 +35,13 @@
         <div class="winning-message" id="winningMessage">
             <div id="winningMessageText"></div>
             <button id="restartButtonMessage" class="restart-button"></button>
+        </div>
+        <div class="game-mode">
+            <label for="gameMode">Modo de Juego:</label>
+            <select id="gameMode">
+                <option value="human">Otro Jugador</option>
+                <option value="ai">IA(Inteligent)</option>
+            </select>
         </div>
         <footer class="developer-credit">
             <p>Desarrollado por <span class="Reinaldo">@Reinaldo MP</span></p>

@@ -18,7 +18,8 @@ const restartButton = document.getElementById('restartButton')
 const restartButtonMessage = document.getElementById('restartButtonMessage')
 const themeSwitcher = document.getElementById('themeSwitcher')
 const themeIcon = document.getElementById('themeIcon')
-let circleTurn
+const gameModeSelect = document.getElementById('gameMode')
+let isUserTurn = true
 
 const clickSoundSrc = 'music/click.wav'
 const winSound = new Audio('music/victoria.wav')
@@ -30,9 +31,10 @@ startGame()
 restartButton.addEventListener('click', startGame)
 restartButtonMessage.addEventListener('click', startGame)
 themeSwitcher.addEventListener('click', toggleTheme)
+gameModeSelect.addEventListener('change', handleGameModeChange)
 
 function startGame() {
-    circleTurn = false
+    isUserTurn = true
     cellElements.forEach(cell => {
         cell.classList.remove(X_CLASS)
         cell.classList.remove(CIRCLE_CLASS)
@@ -44,33 +46,37 @@ function startGame() {
 }
 
 function handleClick(e) {
+    const cell = e.target
+    const currentClass = isUserTurn ? X_CLASS : CIRCLE_CLASS
+    placeMark(cell, currentClass)
+
     if (clickSound) {
         clickSound.pause()
         clickSound.currentTime = 0
     }
-    clickSound = new Audio(clickSoundSrc) // Create a new Audio instance
-    clickSound.play() // Play click sound
+    clickSound = new Audio(clickSoundSrc)
+    clickSound.play()
 
-    const cell = e.target
-    const currentClass = circleTurn ? CIRCLE_CLASS : X_CLASS
-    placeMark(cell, currentClass)
     if (checkWin(currentClass)) {
         if (clickSound) {
             clickSound.pause()
             clickSound.currentTime = 0
         }
         endGame(false)
-        winSound.play() // Play win sound
+        winSound.play()
     } else if (isDraw()) {
         if (clickSound) {
             clickSound.pause()
             clickSound.currentTime = 0
         }
         endGame(true)
-        drawSound.play() // Play draw sound
+        drawSound.play()
     } else {
         swapTurns()
         setBoardHoverClass()
+        if (!isUserTurn && gameModeSelect.value === 'ai') {
+            setTimeout(systemMove, 500) // Add a delay for the system's move
+        }
     }
 }
 
@@ -78,9 +84,10 @@ function endGame(draw) {
     if (draw) {
         winningMessageTextElement.innerText = '¡Empate!'
     } else {
-        winningMessageTextElement.innerText = `${circleTurn ? "O's" : "X's"} ¡Ha Ganado!`
+        winningMessageTextElement.innerText = `${isUserTurn ? "X's" : "O's"} ¡Ha Ganado!`
     }
     winningMessageElement.classList.add('show')
+    updateScoreboard(draw ? null : isUserTurn ? 'x' : 'o')
 }
 
 function isDraw() {
@@ -94,16 +101,16 @@ function placeMark(cell, currentClass) {
 }
 
 function swapTurns() {
-    circleTurn = !circleTurn
+    isUserTurn = !isUserTurn
 }
 
 function setBoardHoverClass() {
     board.classList.remove(X_CLASS)
     board.classList.remove(CIRCLE_CLASS)
-    if (circleTurn) {
-        board.classList.add(CIRCLE_CLASS)
-    } else {
+    if (isUserTurn) {
         board.classList.add(X_CLASS)
+    } else {
+        board.classList.add(CIRCLE_CLASS)
     }
 }
 
@@ -115,11 +122,96 @@ function checkWin(currentClass) {
     })
 }
 
+function systemMove() {
+    const bestMove = minimax(cellElements, CIRCLE_CLASS).index
+    if (bestMove !== undefined) {
+        const cell = cellElements[bestMove]
+        placeMark(cell, CIRCLE_CLASS)
+        if (checkWin(CIRCLE_CLASS)) {
+            endGame(false)
+            winSound.play()
+        } else if (isDraw()) {
+            endGame(true)
+            drawSound.play()
+        } else {
+            swapTurns()
+            setBoardHoverClass()
+        }
+    }
+}
+
+function minimax(newBoard, player) {
+    const availSpots = [...newBoard].filter(cell => !cell.classList.contains(X_CLASS) && !cell.classList.contains(CIRCLE_CLASS))
+
+    if (checkWin(X_CLASS)) {
+        return { score: -10 }
+    } else if (checkWin(CIRCLE_CLASS)) {
+        return { score: 10 }
+    } else if (availSpots.length === 0) {
+        return { score: 0 }
+    }
+
+    const moves = []
+
+    for (let i = 0; i < availSpots.length; i++) {
+        const move = {}
+        move.index = [...cellElements].indexOf(availSpots[i])
+        newBoard[move.index].classList.add(player)
+
+        if (player === CIRCLE_CLASS) {
+            const result = minimax(newBoard, X_CLASS)
+            move.score = result.score
+        } else {
+            const result = minimax(newBoard, CIRCLE_CLASS)
+            move.score = result.score
+        }
+
+        newBoard[move.index].classList.remove(player)
+
+        moves.push(move)
+    }
+
+    let bestMove
+    if (player === CIRCLE_CLASS) {
+        let bestScore = -10000
+        for (let i = 0; i < moves.length; i++) {
+            if (moves[i].score > bestScore) {
+                bestScore = moves[i].score
+                bestMove = i
+            }
+        }
+    } else {
+        let bestScore = 10000
+        for (let i = 0; i < moves.length; i++) {
+            if (moves[i].score < bestScore) {
+                bestScore = moves[i].score
+                bestMove = i
+            }
+        }
+    }
+
+    return moves[bestMove]
+}
+
 function toggleTheme() {
     document.body.classList.toggle('dark')
     if (document.body.classList.contains('dark')) {
         themeIcon.src = 'images/half-moon.png'
     } else {
         themeIcon.src = 'images/sun.png'
+    }
+}
+
+function handleGameModeChange() {
+    startGame() // Limpia el tablero cada vez que cambia el modo de juego
+}
+
+function updateScoreboard(winner) {
+    if (winner === 'x') {
+        const xWinsElement = document.getElementById('xWins')
+        xWinsElement.textContent = parseInt(xWinsElement.textContent) + 1
+    } else if (winner === 'o') {
+        const oWinsElement = document.getElementById('oWins')
+        oWinsElement.textContent = parseInt(oWinsElement.textContent) + 1
     }
 }
