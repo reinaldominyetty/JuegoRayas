@@ -20,6 +20,7 @@ const themeSwitcher = document.getElementById('themeSwitcher')
 const themeIcon = document.getElementById('themeIcon')
 const gameModeSelect = document.getElementById('gameMode')
 let isUserTurn = true
+let isGameOver = false
 
 const clickSoundSrc = 'music/click.wav'
 const winSound = new Audio('music/victoria.wav')
@@ -35,6 +36,7 @@ gameModeSelect.addEventListener('change', handleGameModeChange)
 
 function startGame() {
     isUserTurn = true
+    isGameOver = false
     cellElements.forEach(cell => {
         cell.classList.remove(X_CLASS)
         cell.classList.remove(CIRCLE_CLASS)
@@ -46,7 +48,11 @@ function startGame() {
 }
 
 function handleClick(e) {
+    if (isGameOver) return
     const cell = e.target
+    if (cell.classList.contains(X_CLASS) || cell.classList.contains(CIRCLE_CLASS)) {
+        return // Evita marcar una celda ya ocupada
+    }
     const currentClass = isUserTurn ? X_CLASS : CIRCLE_CLASS
     placeMark(cell, currentClass)
 
@@ -81,6 +87,7 @@ function handleClick(e) {
 }
 
 function endGame(draw) {
+    isGameOver = true
     if (draw) {
         winningMessageTextElement.innerText = '¡Empate!'
     } else {
@@ -123,10 +130,23 @@ function checkWin(currentClass) {
 }
 
 function systemMove() {
+    const availableCells = [...cellElements].filter(cell => 
+        !cell.classList.contains(X_CLASS) && !cell.classList.contains(CIRCLE_CLASS)
+    )
+    if (availableCells.length === 0) return
     const bestMove = minimax(cellElements, CIRCLE_CLASS).index
     if (bestMove !== undefined) {
         const cell = cellElements[bestMove]
         placeMark(cell, CIRCLE_CLASS)
+
+        // Reproduce el sonido de clic cuando la IA hace un movimiento
+        if (clickSound) {
+            clickSound.pause()
+            clickSound.currentTime = 0
+        }
+        clickSound = new Audio(clickSoundSrc)
+        clickSound.play()
+
         if (checkWin(CIRCLE_CLASS)) {
             endGame(false)
             winSound.play()
@@ -204,6 +224,7 @@ function toggleTheme() {
 
 function handleGameModeChange() {
     startGame() // Limpia el tablero cada vez que cambia el modo de juego
+    resetScoreboard() // Resetea el marcador cuando se cambia el modo de juego
 }
 
 function updateScoreboard(winner) {
@@ -214,4 +235,9 @@ function updateScoreboard(winner) {
         const oWinsElement = document.getElementById('oWins')
         oWinsElement.textContent = parseInt(oWinsElement.textContent) + 1
     }
+}
+
+function resetScoreboard() {
+    document.getElementById('xWins').textContent = '0'
+    document.getElementById('oWins').textContent = '0'
 }
